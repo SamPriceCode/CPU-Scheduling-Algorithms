@@ -8,19 +8,6 @@
 using namespace std;
 
 namespace sch {
-	/*extern const int P1[];
-	extern const int P2[];
-	extern const int P3[];
-	extern const int P4[];
-	extern const int P5[];
-	extern const int P6[];
-	extern const int P7[];
-	extern const int P8[];
-
-	extern const int* PROGRAMS[];*/
-
-	extern const int NEW, READY, CPU, IO, TERMINATE;
-
 	struct PCB {
 		int number;
 		const int* instructions;

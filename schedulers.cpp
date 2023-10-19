@@ -70,6 +70,16 @@ namespace sch{
 		}
 	}
 
+	int longestIO(vector<PCB>& ioQ) {
+		int longest = ioQ[0].ioBurst;
+		for (int i = 1; i < ioQ.size(); i++) {
+			if (ioQ[i].ioBurst > longest) {
+				longest = ioQ[i].ioBurst;
+			}
+		}
+		return longest;
+	}
+
 	int getInstructionLength(const int process[], int number) {
 		int i = 0, length = 0;
 		cout << "\nP" << number << ": { ";
@@ -88,13 +98,15 @@ namespace sch{
 			cout << "\n\tProcess " << i << ": " << readyQ[i].length;
 		}
 	}
+
+
 }
 
 //schedulers
 namespace sch {
 	void FirstComeFirstServe() {
 		int clock, readypos = 0, procpos = 0,
-			cputime = 0;
+			bursttime = 0, time_elapsed = 0;
 		bool ioburst;
 		vector<PCB> readyQ, cpuQ, ioQ, terminateQ;
 
@@ -111,50 +123,61 @@ namespace sch {
 				<< " - Ready queue size: " << readyQ.size()
 				<< " - I/O queue size: " << ioQ.size();
 			if (readyQ.size() > 0) {
+				cout << " -- CPU BURST";
 				cpuQ.push_back(readyQ[0]);
 				cpuQ[0].accessed = true;
 				readyQ.erase(readyQ.begin());
+				bursttime = cpuQ[0].instructions[cpuQ[0].counter];
+				cout << "\n\tProcessing: P" << cpuQ[0].number << " instruction #" << cpuQ[0].counter << " for " << bursttime << " cycles.";
+			}
+			else if (ioQ.size() > 0 && readyQ.size() < 1) {
+				cout << "-- IO BURST";
+				bursttime = longestIO(ioQ);
+				cout << "\n\tSending to IO for " << bursttime << " cycles.";
 			}
 
-			cputime = 0;
 
-			cout << "\n\tProcessing: P" << cpuQ[0].number << " instruction #" << cpuQ[0].counter << " for " << cpuQ[0].instructions[cpuQ[0].counter] << " cycles.";
-
+			
+			
+			time_elapsed = 0;
 			checkIO(ioQ);
-			while (cputime < cpuQ[0].instructions[cpuQ[0].counter]) {
+			while (bursttime > 0) {
 				if (readyQ.size() > 0) {
 					addTime(readyQ);
 				}
 				clock++;
-				cputime++;
+				bursttime--;
+				time_elapsed++;
 				decreaseIO(ioQ);
 				dismissIO(ioQ, readyQ);
 			}
-			cout << "\n\tCycle length: " << cputime;
+			cout << "\n\tBurst length: " << time_elapsed;
 			checkIO(ioQ);
 
-			cpuQ[0].counter++;
-
-			cout << "\nCpu counter/instructions: " << cpuQ[0].counter << "/" << cpuQ[0].length;
-
-			if (cpuQ[0].counter >= cpuQ[0].length) {
-				cout << "\n\tTerminating process P" << cpuQ[0].number;
-				terminateQ.push_back(cpuQ[0]);
-				cpuQ.erase(cpuQ.begin());
-			}
-
-
 			if (cpuQ.size()) {
-				ioQ.push_back(cpuQ[0]);
-				ioQ.back().ioBurst = ioQ.back().instructions[ioQ.back().counter];
-				cpuQ.erase(cpuQ.begin());
+				cpuQ[0].counter++;
+
+				cout << "\nCpu counter/instructions: " << cpuQ[0].counter << "/" << cpuQ[0].length;
+			
+				if (cpuQ[0].counter >= cpuQ[0].length) {
+					cout << "\n\tTerminating process P" << cpuQ[0].number;
+					terminateQ.push_back(cpuQ[0]);
+					cpuQ.erase(cpuQ.begin());
+				}
+				
+				if (cpuQ.size()) {
+					ioQ.push_back(cpuQ[0]);
+					ioQ.back().ioBurst = ioQ.back().instructions[ioQ.back().counter];
+					cpuQ.erase(cpuQ.begin());
+				}
+				
 			}
 
 			cout << "\nTerminate queue size: " << terminateQ.size();
 			cout << endl;
 
 
-			if (readyQ.size() < 1) {
+			if (terminateQ.size() == 8) {
 				break;
 			}
 		}
