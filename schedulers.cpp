@@ -117,29 +117,30 @@ namespace sch {
 	}
 }
 
-//schedulers
+//simulation
 namespace sch {
-	void FirstComeFirstServe() {
+	void CPU_Simulation() {
 		int clock, readypos = 0, procpos = 0,
-			bursttime = 0, time_elapsed = 0;
+			bursttime = 0, time_elapsed = 0, total_programs;
 		bool ioburst;
 		vector<PCB> readyQ, cpuQ, ioQ, terminateQ;
 
 		vector<int> ioBurst;
 		loadPrograms(readyQ);
-
+		total_programs = readyQ.size();
 
 		processLengths(readyQ);
 
 		clock = 0;
 		cout << "\n---------------------Start Simulation---------------------";
-		while (true) {
+		cout << terminateQ.size();
+		while (terminateQ.size() < total_programs) {
 			cout << "\nClock #: " << clock
 				<< " - Ready queue size: " << readyQ.size()
 				<< " - I/O queue size: " << ioQ.size();
 
 			//determine which burst is being processed primarily
-			if (readyQ.size() > 0) {
+			if (readyQ.size() > 0 && cpuQ.size() == 0) {
 				cout << " -- CPU BURST";
 				cpuQ.push_back(readyQ[0]);
 				cpuQ[0].accessed = true;
@@ -173,6 +174,7 @@ namespace sch {
 			cout << "\n\tBurst length: " << time_elapsed;
 			checkIO(ioQ);
 
+
 			if (cpuQ.size()) {
 				//increase process counter
 				cpuQ[0].counter++;
@@ -193,17 +195,11 @@ namespace sch {
 					ioQ.back().ioBurst = ioQ.back().instructions[ioQ.back().counter];
 					cpuQ.erase(cpuQ.begin());
 					clock++;
-				}
-				
+				}	
 			}
 
 			cout << "\nTerminate queue size: " << terminateQ.size();
 			cout << endl;
-
-
-			if (terminateQ.size() == 8) {
-				break;
-			}
 		}
 
 		showStats(terminateQ, clock);
@@ -211,3 +207,9 @@ namespace sch {
 
 }
 
+//schedulers
+namespace sch {
+
+
+
+}

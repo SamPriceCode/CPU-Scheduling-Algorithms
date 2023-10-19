@@ -5,7 +5,7 @@ using namespace sch;
 
 int main() {
 
-	FirstComeFirstServe();
+	CPU_Simulation();
 
 	return 0;
 }

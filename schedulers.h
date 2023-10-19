@@ -19,32 +19,35 @@ namespace sch {
 		bool accessed = false;
 	};
 	
-	//First Come First Serve
-		void FirstComeFirstServe();
+//Main simulation function
+	void CPU_Simulation();
 
 
-	//General simulation commands
-		//load program P# arrays from array PROGRAMS
-		void loadPrograms(vector<PCB>&);
-		//add wait and response time to processes in Ready queue
-		void addTime(vector<PCB>&);
+//General simulation commands
+	//load program P# arrays from array PROGRAMS
+	void loadPrograms(vector<PCB>&);
+	//add wait and response time to processes in Ready queue
+	void addTime(vector<PCB>&);
 
-		//decrease given ioBurst time for all processes in IO queue
-		void decreaseIO(vector<PCB>&);
-		//input IO queue and Ready queue, returns all ended IO processes to Ready queue
-		void dismissIO(vector<PCB>&, vector<PCB>&);
-		//prints remaining IO burst time for all processes in IO queue
-		void checkIO(vector<PCB>&);
+	//decrease given ioBurst time for all processes in IO queue
+	void decreaseIO(vector<PCB>&);
+	//input IO queue and Ready queue, returns all ended IO processes to Ready queue
+	void dismissIO(vector<PCB>&, vector<PCB>&);
+	//prints remaining IO burst time for all processes in IO queue
+	void checkIO(vector<PCB>&);
 
-		int longestIO(vector<PCB>&);
+	int longestIO(vector<PCB>&);
 
-		//gets length of a given array
-		int getInstructionLength(const int process[], int);
-		//prints struct variable length from a given PCB
-		void processLengths(vector<PCB>&);
+	//gets length of a given array
+	int getInstructionLength(const int process[], int);
+	//prints struct variable length from a given PCB
+	void processLengths(vector<PCB>&);
 
-		//prints the waiting, response, and turnaround time for all given processes
-		void showStats(vector<PCB>&, int);
+	//prints the waiting, response, and turnaround time for all given processes
+	void showStats(vector<PCB>&, int);
+
+
+//Scheduling Functions
 }
 
 #endif
