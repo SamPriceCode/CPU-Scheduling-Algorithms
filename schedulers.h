@@ -20,14 +20,23 @@ namespace sch {
 	};
 	
 //Main simulation function
-	void CPU_Simulation();
+
+	//Simulates a CPU and desired scheduling algorithm
+	//Input Choice for Simulation:
+	// 1. First Come First Serve
+	// 2. Shortest Job First
+	// 3. Multilevel Feedback Queue
+	void CPU_Simulation(int);
 
 
 //General simulation commands
+
 	//load program P# arrays from array PROGRAMS
 	void loadPrograms(vector<PCB>&);
 	//add wait and response time to processes in Ready queue
 	void addTime(vector<PCB>&);
+
+	void checkReady(vector<PCB>&);
 
 	//decrease given ioBurst time for all processes in IO queue
 	void decreaseIO(vector<PCB>&);
@@ -48,6 +57,13 @@ namespace sch {
 
 
 //Scheduling Functions
+	int selectSchedule(vector<PCB>&, int);
+	int selectSchedule(vector<PCB>&, int, int);
+
+
+	int FCFS();
+
+	int SJF(vector<PCB>&);
 }
 
 #endif

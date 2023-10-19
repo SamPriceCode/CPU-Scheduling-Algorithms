@@ -4,6 +4,25 @@
 
 using namespace std;
 
+//misc
+namespace {
+	void sayChoice(int choice) {
+		int const FirstComeFirstServe = 0, ShortestJobFirst = 1, MultiLevelFeedbackQueue = 2;
+		cout << "---SCHEDULER: ";
+		switch (choice) {
+		case FirstComeFirstServe:
+			cout << "First Come First Serve";
+			break;
+		case ShortestJobFirst:
+			cout << "Shortest Job First";
+			break;
+		case MultiLevelFeedbackQueue:
+			cout << "Multilevel Feedback Queue";
+			break;
+		}
+	}
+}
+
 //constants
 namespace sch {
 	const int P1[] = { 5, 27, 3, 31, 5, 43, 4, 18, 6, 22, 4, 26, 3, 24, 4 };
@@ -19,6 +38,101 @@ namespace sch {
 
 	const int NEW = 0, READY = 1, CPU = 2, IO = 3, TERMINATE = 4;
 
+	int const FirstComeFirstServe = 0, ShortestJobFirst = 1, MultiLevelFeedbackQueue = 2;
+
+}
+
+//simulation
+namespace sch {
+	void CPU_Simulation(int schedule_choice) {
+		int clock, readypos = 0, procpos = 0,
+			bursttime = 0, time_elapsed = 0, total_programs;
+		bool ioburst;
+		vector<PCB> readyQ, cpuQ, ioQ, terminateQ;
+
+		vector<int> ioBurst;
+		loadPrograms(readyQ);
+		total_programs = readyQ.size();
+
+		processLengths(readyQ);
+
+		clock = 0;
+		cout << "\n---------------------Start Simulation---------------------";
+		cout << terminateQ.size();
+		while (terminateQ.size() < total_programs) {
+			cout << "\nClock #: " << clock
+				<< " - Ready queue size: " << readyQ.size()
+				<< " - I/O queue size: " << ioQ.size();
+
+			//determine which burst is being processed primarily
+			if (readyQ.size() > 0 && cpuQ.size() == 0) {
+				cout << " -- CPU BURST";
+				readypos = selectSchedule(readyQ, schedule_choice);
+				cpuQ.push_back(readyQ[readypos]);
+				cpuQ[0].accessed = true;
+				readyQ.erase(readyQ.begin()+readypos);
+				bursttime = cpuQ[0].instructions[cpuQ[0].counter];
+				cout << "\n\tProcessing: P" << cpuQ[0].number << " instruction #" << cpuQ[0].counter << " for " << bursttime << " cycles.";
+				clock++;
+			}
+			else if (ioQ.size() > 0 && readyQ.size() < 1) {
+				cout << "-- IO BURST";
+				bursttime = longestIO(ioQ);
+				cout << "\n\tSending to IO for " << bursttime << " cycles.";
+			}
+
+			//start simulation
+			time_elapsed = 0;
+			checkReady(readyQ);
+			checkIO(ioQ);
+			while (bursttime > 0) {
+				//add time to any waiting processes
+				if (readyQ.size() > 0) {
+					addTime(readyQ);
+				}
+				//increase simulation counters
+				clock++;
+				bursttime--;
+				time_elapsed++;
+				//process IO bursts
+				decreaseIO(ioQ);
+				dismissIO(ioQ, readyQ);
+			}
+			cout << "\n\tBurst length: " << time_elapsed;
+			checkReady(readyQ);
+			checkIO(ioQ);
+
+
+			if (cpuQ.size()) {
+				//increase process counter
+				cpuQ[0].counter++;
+
+				cout << "\nCpu counter/instructions: " << cpuQ[0].counter << "/" << cpuQ[0].length;
+				
+				//terminate finished process
+				if (cpuQ[0].counter >= cpuQ[0].length) {
+					cout << "\n\tTerminating process P" << cpuQ[0].number;
+					terminateQ.push_back(cpuQ[0]);
+					cpuQ.erase(cpuQ.begin());
+					clock++;
+				} 
+				
+				//send process to IO queue after completed CPU burst
+				if (cpuQ.size()) {
+					ioQ.push_back(cpuQ[0]);
+					ioQ.back().ioBurst = ioQ.back().instructions[ioQ.back().counter];
+					cpuQ.erase(cpuQ.begin());
+					clock++;
+				}	
+			}
+
+			cout << "\nTerminate queue size: " << terminateQ.size();
+			cout << endl;
+		}
+
+		sayChoice(schedule_choice);
+		showStats(terminateQ, clock);
+	}
 }
 
 //simulation functions
@@ -44,6 +158,13 @@ namespace sch {
 		}
 	}
 
+	void checkReady(vector<PCB>& readyQ) {
+		cout << "\n\t\t\tProcesses in ReadyQ:\n\t\t\t";
+		for (int i = 0; i < readyQ.size(); i++) {
+			cout << " - P" << readyQ[i].number;
+		}
+	}
+
 	void decreaseIO(vector<PCB>& ioQ) {
 		for (int i = 0; i < ioQ.size(); i++) {
 			ioQ[i].ioBurst--;
@@ -66,7 +187,7 @@ namespace sch {
 	void checkIO(vector<PCB>& ioQ) {
 		//cout << "\n\t\t\t\tDismiss IO & sizeL:" << ioQ.size() << endl;
 		for (int i = 0; i < ioQ.size(); i++) {
-			cout << "\n\t\t Process " << ioQ[i].number << " I/O Time: " << ioQ[i].ioBurst;
+			cout << "\n\t\tProcess " << ioQ[i].number << "I/O Time: " << ioQ[i].ioBurst;
 		}
 	}
 
@@ -115,101 +236,42 @@ namespace sch {
 			cout << "\t" << turnaround;
 		}
 	}
-}
 
-//simulation
-namespace sch {
-	void CPU_Simulation() {
-		int clock, readypos = 0, procpos = 0,
-			bursttime = 0, time_elapsed = 0, total_programs;
-		bool ioburst;
-		vector<PCB> readyQ, cpuQ, ioQ, terminateQ;
-
-		vector<int> ioBurst;
-		loadPrograms(readyQ);
-		total_programs = readyQ.size();
-
-		processLengths(readyQ);
-
-		clock = 0;
-		cout << "\n---------------------Start Simulation---------------------";
-		cout << terminateQ.size();
-		while (terminateQ.size() < total_programs) {
-			cout << "\nClock #: " << clock
-				<< " - Ready queue size: " << readyQ.size()
-				<< " - I/O queue size: " << ioQ.size();
-
-			//determine which burst is being processed primarily
-			if (readyQ.size() > 0 && cpuQ.size() == 0) {
-				cout << " -- CPU BURST";
-				cpuQ.push_back(readyQ[0]);
-				cpuQ[0].accessed = true;
-				readyQ.erase(readyQ.begin());
-				bursttime = cpuQ[0].instructions[cpuQ[0].counter];
-				cout << "\n\tProcessing: P" << cpuQ[0].number << " instruction #" << cpuQ[0].counter << " for " << bursttime << " cycles.";
-				clock++;
-			}
-			else if (ioQ.size() > 0 && readyQ.size() < 1) {
-				cout << "-- IO BURST";
-				bursttime = longestIO(ioQ);
-				cout << "\n\tSending to IO for " << bursttime << " cycles.";
-			}
-
-			//start simulation
-			time_elapsed = 0;
-			checkIO(ioQ);
-			while (bursttime > 0) {
-				//add time to any waiting processes
-				if (readyQ.size() > 0) {
-					addTime(readyQ);
-				}
-				//increase simulation counters
-				clock++;
-				bursttime--;
-				time_elapsed++;
-				//process IO bursts
-				decreaseIO(ioQ);
-				dismissIO(ioQ, readyQ);
-			}
-			cout << "\n\tBurst length: " << time_elapsed;
-			checkIO(ioQ);
-
-
-			if (cpuQ.size()) {
-				//increase process counter
-				cpuQ[0].counter++;
-
-				cout << "\nCpu counter/instructions: " << cpuQ[0].counter << "/" << cpuQ[0].length;
-				
-				//terminate finished process
-				if (cpuQ[0].counter >= cpuQ[0].length) {
-					cout << "\n\tTerminating process P" << cpuQ[0].number;
-					terminateQ.push_back(cpuQ[0]);
-					cpuQ.erase(cpuQ.begin());
-					clock++;
-				} 
-				
-				//send process to IO queue after completed CPU burst
-				if (cpuQ.size()) {
-					ioQ.push_back(cpuQ[0]);
-					ioQ.back().ioBurst = ioQ.back().instructions[ioQ.back().counter];
-					cpuQ.erase(cpuQ.begin());
-					clock++;
-				}	
-			}
-
-			cout << "\nTerminate queue size: " << terminateQ.size();
-			cout << endl;
-		}
-
-		showStats(terminateQ, clock);
-	}
-
+	
 }
 
 //schedulers
 namespace sch {
+	int selectSchedule(vector<PCB>& readyQ, int choice) {
+		return selectSchedule(readyQ, choice, 0);
+	}
 
+	int selectSchedule(vector<PCB>& readyQ, int choice, int levels) {
+		switch (choice) {
+		case FirstComeFirstServe:
+			return FCFS();
+		case ShortestJobFirst:
+			return SJF(readyQ);
+		case MultiLevelFeedbackQueue:
+			return FCFS();
+		}
+	}
+
+	int FCFS() {
+		return 0;
+	}
+
+	int SJF(vector<PCB>& readyQ) {
+		PCB test = readyQ[0];
+		int shortest = 0;
+		for (int i = 0; i < readyQ.size(); i++) {
+			if (readyQ[i].instructions[readyQ[i].counter] < test.instructions[test.counter]) {
+				test = readyQ[i];
+				shortest = i;
+			}
+		}
+		return shortest;
+	}
 
 
 }
