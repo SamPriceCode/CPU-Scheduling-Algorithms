@@ -132,7 +132,6 @@
   <ItemGroup>
     <ClCompile Include="schedulers.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="constants.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
