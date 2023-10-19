@@ -36,13 +36,15 @@ namespace sch {
 		//prints remaining IO burst time for all processes in IO queue
 		void checkIO(vector<PCB>&);
 
+		int longestIO(vector<PCB>&);
+
 		//gets length of a given array
 		int getInstructionLength(const int process[], int);
 		//prints struct variable length from a given PCB
 		void processLengths(vector<PCB>&);
 
 		//prints the waiting, response, and turnaround time for all given processes
-		void showStats(vector<PCB>&);
+		void showStats(vector<PCB>&, int);
 }
 
 #endif

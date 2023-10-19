@@ -22,7 +22,7 @@ namespace sch {
 }
 
 //simulation functions
-namespace sch{
+namespace sch {
 	void loadPrograms(vector<PCB>& readyQ) {
 		for (int i = 0; i < 8; i++) {
 			PCB process;
@@ -56,8 +56,9 @@ namespace sch{
 		for (int i = 0; i < ioQ.size(); i++) {
 			//cout << "\n\t\t Process " << ioQ[i].number << " I/O burst time: " << ioQ[i].ioBurst;
 			if (ioQ[i].ioBurst <= 0) {
+				ioQ[i].counter++;
 				readyQ.push_back(ioQ[i]);
-				ioQ.erase(ioQ.begin()+i);
+				ioQ.erase(ioQ.begin() + i);
 			}
 		}
 	}
@@ -98,8 +99,21 @@ namespace sch{
 		}
 	}
 
-	void showStats(vector<PCB>& processes) {
-		;
+	void showStats(vector<PCB>& procs, int clock) {
+		int turnaround;
+		cout << "\nP#\tTr\tTw\tI\tTtr - Clock:" << clock;
+		for (int i = 0; i < 8; i++) {
+			turnaround = 0;
+			cout << "\nP" << procs[i].number
+				<< "\t" << procs[i].responsetime
+				<< "\t" << procs[i].waittime;
+			for (int j = 0; j < procs[i].length; j++) {
+				turnaround += procs[i].instructions[j];
+			}
+			cout << "\t" << turnaround;
+			turnaround += procs[i].waittime;
+			cout << "\t" << turnaround;
+		}
 	}
 }
 
@@ -132,15 +146,15 @@ namespace sch {
 				readyQ.erase(readyQ.begin());
 				bursttime = cpuQ[0].instructions[cpuQ[0].counter];
 				cout << "\n\tProcessing: P" << cpuQ[0].number << " instruction #" << cpuQ[0].counter << " for " << bursttime << " cycles.";
+				clock++;
 			}
 			else if (ioQ.size() > 0 && readyQ.size() < 1) {
 				cout << "-- IO BURST";
 				bursttime = longestIO(ioQ);
 				cout << "\n\tSending to IO for " << bursttime << " cycles.";
+				clock++;
 			}
 
-
-			
 			//start simulation
 			time_elapsed = 0;
 			checkIO(ioQ);
@@ -171,6 +185,7 @@ namespace sch {
 					cout << "\n\tTerminating process P" << cpuQ[0].number;
 					terminateQ.push_back(cpuQ[0]);
 					cpuQ.erase(cpuQ.begin());
+					clock++;
 				}
 				
 				//send process to IO queue after completed CPU burst
@@ -178,6 +193,7 @@ namespace sch {
 					ioQ.push_back(cpuQ[0]);
 					ioQ.back().ioBurst = ioQ.back().instructions[ioQ.back().counter];
 					cpuQ.erase(cpuQ.begin());
+					clock++;
 				}
 				
 			}
@@ -191,8 +207,8 @@ namespace sch {
 			}
 		}
 
-
-
+		showStats(terminateQ, clock);
 	}
 
 }
+
