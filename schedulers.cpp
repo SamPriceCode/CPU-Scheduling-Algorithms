@@ -152,7 +152,6 @@ namespace sch {
 				cout << "-- IO BURST";
 				bursttime = longestIO(ioQ);
 				cout << "\n\tSending to IO for " << bursttime << " cycles.";
-				clock++;
 			}
 
 			//start simulation
@@ -186,7 +185,7 @@ namespace sch {
 					terminateQ.push_back(cpuQ[0]);
 					cpuQ.erase(cpuQ.begin());
 					clock++;
-				}
+				} 
 				
 				//send process to IO queue after completed CPU burst
 				if (cpuQ.size()) {
