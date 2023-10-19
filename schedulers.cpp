@@ -26,8 +26,7 @@ namespace sch{
 	void loadPrograms(vector<PCB>& readyQ) {
 		for (int i = 0; i < 8; i++) {
 			PCB process;
-			process.state = READY;
-			process.number = i+1;
+			process.number = i;
 			process.instructions = PROGRAMS[i];
 			process.length = getInstructionLength(PROGRAMS[i], process.number);
 			readyQ.push_back(process);
@@ -82,9 +81,9 @@ namespace sch{
 
 	int getInstructionLength(const int process[], int number) {
 		int i = 0, length = 0;
-		cout << "\nP" << number << ": { ";
+		cout << "\nP" << number << ": {  ";
 		while (process[i]) {
-			cout << process[i] << " ";
+			cout << process[i] << "  ";
 			length++;
 			i++;
 		}
@@ -93,13 +92,15 @@ namespace sch{
 	}
 
 	void processLengths(vector<PCB>& readyQ) {
-		cout << "Process instructions lengths:";
+		cout << "\n\nProcess instructions lengths:";
 		for (int i = 0; i < readyQ.size(); i++) {
 			cout << "\n\tProcess " << i << ": " << readyQ[i].length;
 		}
 	}
 
-
+	void showStats(vector<PCB>& processes) {
+		;
+	}
 }
 
 //schedulers
@@ -122,6 +123,8 @@ namespace sch {
 			cout << "\nClock #: " << clock
 				<< " - Ready queue size: " << readyQ.size()
 				<< " - I/O queue size: " << ioQ.size();
+
+			//determine which burst is being processed primarily
 			if (readyQ.size() > 0) {
 				cout << " -- CPU BURST";
 				cpuQ.push_back(readyQ[0]);
@@ -138,16 +141,19 @@ namespace sch {
 
 
 			
-			
+			//start simulation
 			time_elapsed = 0;
 			checkIO(ioQ);
 			while (bursttime > 0) {
+				//add time to any waiting processes
 				if (readyQ.size() > 0) {
 					addTime(readyQ);
 				}
+				//increase simulation counters
 				clock++;
 				bursttime--;
 				time_elapsed++;
+				//process IO bursts
 				decreaseIO(ioQ);
 				dismissIO(ioQ, readyQ);
 			}
@@ -155,16 +161,19 @@ namespace sch {
 			checkIO(ioQ);
 
 			if (cpuQ.size()) {
+				//increase process counter
 				cpuQ[0].counter++;
 
 				cout << "\nCpu counter/instructions: " << cpuQ[0].counter << "/" << cpuQ[0].length;
-			
+				
+				//terminate finished process
 				if (cpuQ[0].counter >= cpuQ[0].length) {
 					cout << "\n\tTerminating process P" << cpuQ[0].number;
 					terminateQ.push_back(cpuQ[0]);
 					cpuQ.erase(cpuQ.begin());
 				}
 				
+				//send process to IO queue after completed CPU burst
 				if (cpuQ.size()) {
 					ioQ.push_back(cpuQ[0]);
 					ioQ.back().ioBurst = ioQ.back().instructions[ioQ.back().counter];
