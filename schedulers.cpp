@@ -8,7 +8,7 @@ using namespace std;
 namespace {
 	void sayChoice(int choice) {
 		int const FirstComeFirstServe = 0, ShortestJobFirst = 1, MultiLevelFeedbackQueue = 2;
-		cout << "---SCHEDULER: ";
+		cout << "\n\tSCHEDULER: ";
 		switch (choice) {
 		case FirstComeFirstServe:
 			cout << "First Come First Serve";
@@ -25,14 +25,14 @@ namespace {
 
 //constants
 namespace sch {
-	const int P1[] = { 5, 27, 3, 31, 5, 43, 4, 18, 6, 22, 4, 26, 3, 24, 4 };
-	const int P2[] = { 4, 48, 5, 44, 7, 42, 12, 37, 9, 76, 4, 41, 9, 31, 7, 43, 8 };
-	const int P3[] = { 8, 33, 12, 41, 18, 65, 14, 21, 4, 61, 15, 18, 14, 26, 5, 31, 6 };
-	const int P4[] = { 3, 35, 4, 41, 5, 45, 3, 51, 4, 61, 5, 54, 6, 82, 5, 77, 3 };
-	const int P5[] = { 16, 24, 17, 21, 5, 36, 16, 26, 7, 31, 13, 28, 11, 21, 6, 13, 3, 11, 4 };
-	const int P6[] = { 11, 22, 4, 8, 5, 10, 6, 12, 7, 14, 9, 18, 12, 24, 15, 30, 8 };
-	const int P7[] = { 14, 46, 17, 41, 11, 42, 15, 21, 4, 32, 7, 19, 16, 33, 10 };
-	const int P8[] = { 4, 14, 5, 33, 6, 51, 14, 73, 16, 87, 6 };
+	const int P1[] = { 5, 27, 3, 31, 5, 43, 4, 18, 6, 22, 4, 26, 3, 24, 4 , -1};
+	const int P2[] = { 4, 48, 5, 44, 7, 42, 12, 37, 9, 76, 4, 41, 9, 31, 7, 43, 8 , -1};
+	const int P3[] = { 8, 33, 12, 41, 18, 65, 14, 21, 4, 61, 15, 18, 14, 26, 5, 31, 6 , -1};
+	const int P4[] = { 3, 35, 4, 41, 5, 45, 3, 51, 4, 61, 5, 54, 6, 82, 5, 77, 3 , -1};
+	const int P5[] = { 16, 24, 17, 21, 5, 36, 16, 26, 7, 31, 13, 28, 11, 21, 6, 13, 3, 11, 4 , -1};
+	const int P6[] = { 11, 22, 4, 8, 5, 10, 6, 12, 7, 14, 9, 18, 12, 24, 15, 30, 8 , -1};
+	const int P7[] = { 14, 46, 17, 41, 11, 42, 15, 21, 4, 32, 7, 19, 16, 33, 10 , -1};
+	const int P8[] = { 4, 14, 5, 33, 6, 51, 14, 73, 16, 87, 6 , -1};
 
 	const int* PROGRAMS[] = { P1, P2, P3, P4, P5, P6, P7, P8 };
 
@@ -46,7 +46,7 @@ namespace sch {
 namespace sch {
 	void CPU_Simulation(int schedule_choice) {
 		int clock, readypos = 0, procpos = 0,
-			bursttime = 0, time_elapsed = 0, total_programs;
+			bursttime = 0, time_elapsed = 0, total_programs, overhead = 0;
 		bool ioburst;
 		vector<PCB> readyQ, cpuQ, ioQ, terminateQ;
 
@@ -74,6 +74,7 @@ namespace sch {
 				bursttime = cpuQ[0].instructions[cpuQ[0].counter];
 				cout << "\n\tProcessing: P" << cpuQ[0].number << " instruction #" << cpuQ[0].counter << " for " << bursttime << " cycles.";
 				clock++;
+				overhead++;
 			}
 			else if (ioQ.size() > 0 && readyQ.size() < 1) {
 				cout << "-- IO BURST";
@@ -99,15 +100,15 @@ namespace sch {
 				dismissIO(ioQ, readyQ);
 			}
 			cout << "\n\tBurst length: " << time_elapsed;
-			checkReady(readyQ);
-			checkIO(ioQ);
 
 
 			if (cpuQ.size()) {
+				cpuQ[0].cputime += time_elapsed;
+
 				//increase process counter
 				cpuQ[0].counter++;
 
-				cout << "\nCpu counter/instructions: " << cpuQ[0].counter << "/" << cpuQ[0].length;
+				cout << "\n\tCpu counter/instructions: " << cpuQ[0].counter << "/" << cpuQ[0].length;
 				
 				//terminate finished process
 				if (cpuQ[0].counter >= cpuQ[0].length) {
@@ -115,6 +116,7 @@ namespace sch {
 					terminateQ.push_back(cpuQ[0]);
 					cpuQ.erase(cpuQ.begin());
 					clock++;
+					overhead++;
 				} 
 				
 				//send process to IO queue after completed CPU burst
@@ -123,15 +125,19 @@ namespace sch {
 					ioQ.back().ioBurst = ioQ.back().instructions[ioQ.back().counter];
 					cpuQ.erase(cpuQ.begin());
 					clock++;
+					overhead++;
 				}	
 			}
+
+			checkReady(readyQ);
+			checkIO(ioQ);
 
 			cout << "\nTerminate queue size: " << terminateQ.size();
 			cout << endl;
 		}
 
 		sayChoice(schedule_choice);
-		showStats(terminateQ, clock);
+		showStats(terminateQ, clock, overhead);
 	}
 }
 
@@ -159,15 +165,19 @@ namespace sch {
 	}
 
 	void checkReady(vector<PCB>& readyQ) {
-		cout << "\n\t\t\tProcesses in ReadyQ:\n\t\t\t";
+		cout << "\n\t\tProcesses in readyQ:\n\t\t\t";
 		for (int i = 0; i < readyQ.size(); i++) {
-			cout << " - P" << readyQ[i].number;
+			cout << "P" << readyQ[i].number;
+			if (i < readyQ.size() - 1) {
+				cout << ", ";
+			}
 		}
 	}
 
 	void decreaseIO(vector<PCB>& ioQ) {
 		for (int i = 0; i < ioQ.size(); i++) {
 			ioQ[i].ioBurst--;
+			ioQ[i].iotime++;
 		}
 
 	}
@@ -185,9 +195,9 @@ namespace sch {
 	}
 
 	void checkIO(vector<PCB>& ioQ) {
-		//cout << "\n\t\t\t\tDismiss IO & sizeL:" << ioQ.size() << endl;
+		cout << "\n\t\t" << "Processes in ioQ:";
 		for (int i = 0; i < ioQ.size(); i++) {
-			cout << "\n\t\tProcess " << ioQ[i].number << "I/O Time: " << ioQ[i].ioBurst;
+			cout << "\n\t\t\tP" << ioQ[i].number << " - " << ioQ[i].ioBurst << "/" << ioQ[i].instructions[ioQ[i].counter];
 		}
 	}
 
@@ -204,7 +214,7 @@ namespace sch {
 	int getInstructionLength(const int process[], int number) {
 		int i = 0, length = 0;
 		cout << "\nP" << number << ": {  ";
-		while (process[i]) {
+		while (process[i] != -1) {
 			cout << process[i] << "  ";
 			length++;
 			i++;
@@ -220,20 +230,26 @@ namespace sch {
 		}
 	}
 
-	void showStats(vector<PCB>& procs, int clock) {
+	void showStats(vector<PCB>& procs, int clock, int overhead) {
 		int turnaround;
-		cout << "\nP#\tTr\tTw\tI\tTtr - Clock:" << clock;
+		cout << "\n-----------------------------------------------------"
+			<< "\n\tClock: " << clock << "\t|\tOverhead: "  << overhead
+			<< "\n-----------------------------------------------------"
+			<< "\nP#\tTr\tTw\tTcpu\tTio\tTtr";
 		for (int i = 0; i < 8; i++) {
 			turnaround = 0;
 			cout << "\nP" << procs[i].number
 				<< "\t" << procs[i].responsetime
-				<< "\t" << procs[i].waittime;
-			for (int j = 0; j < procs[i].length; j++) {
+				<< "\t" << procs[i].waittime
+				<< "\t" << procs[i].cputime
+				<< "\t" << procs[i].iotime
+				<< "\t" << procs[i].cputime + procs[i].iotime + procs[i].waittime;
+			/*for (int j = 0; j < procs[i].length; j++) {
 				turnaround += procs[i].instructions[j];
 			}
 			cout << "\t" << turnaround;
 			turnaround += procs[i].waittime;
-			cout << "\t" << turnaround;
+			cout << "\t" << turnaround;*/
 		}
 	}
 

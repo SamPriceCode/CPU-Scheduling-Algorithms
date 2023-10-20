@@ -12,6 +12,8 @@ namespace sch {
 		int number;
 		const int* instructions;
 		int length;
+		int cputime = 0;
+		int iotime = 0;
 		int waittime = 0;
 		int responsetime = 0;
 		int counter = 0;
@@ -53,7 +55,7 @@ namespace sch {
 	void processLengths(vector<PCB>&);
 
 	//prints the waiting, response, and turnaround time for all given processes
-	void showStats(vector<PCB>&, int);
+	void showStats(vector<PCB>&, int, int);
 
 
 //Scheduling Functions
