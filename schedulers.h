@@ -23,12 +23,17 @@ namespace sch {
 	
 //Main simulation function
 
+
+	void CPU_Sim(int);
+
+
 	//Simulates a CPU and desired scheduling algorithm
 	//Input Choice for Simulation:
 	// 1. First Come First Serve
 	// 2. Shortest Job First
-	// 3. Multilevel Feedback Queue
-	void CPU_Simulation(int);
+	//Input for Time Quantum:
+	//	
+	void CPU_Sim_Q(int, int[]);
 
 
 //General simulation commands
@@ -50,7 +55,7 @@ namespace sch {
 	int longestIO(vector<PCB>&);
 
 	//gets length of a given array
-	int getInstructionLength(const int process[], int);
+	int getInstructionLength(const int[], int);
 	//prints struct variable length from a given PCB
 	void processLengths(vector<PCB>&);
 

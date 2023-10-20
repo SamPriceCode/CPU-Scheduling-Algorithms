@@ -44,7 +44,13 @@ namespace sch {
 
 //simulation
 namespace sch {
-	void CPU_Simulation(int schedule_choice) {
+	void CPU_Sim(int schedule_choice) {
+		int quantum[2] = {0, 0};
+
+		CPU_Sim_Q(schedule_choice, quantum);
+	}
+
+	void CPU_Sim_Q(int schedule_choice, int quantum[2]) {
 		int clock, readypos = 0, procpos = 0,
 			bursttime = 0, time_elapsed = 0, total_programs, overhead = 0;
 		bool ioburst;
@@ -139,6 +145,7 @@ namespace sch {
 		sayChoice(schedule_choice);
 		showStats(terminateQ, clock, overhead);
 	}
+
 }
 
 //simulation functions
