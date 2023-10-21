@@ -4,10 +4,13 @@
 
 using namespace std;
 
+
+
 //misc
 namespace {
+	int const FirstComeFirstServe = 0, ShortestJobFirst = 1, MultiLevelFeedbackQueue = 2;
+
 	void sayChoice(int choice) {
-		int const FirstComeFirstServe = 0, ShortestJobFirst = 1, MultiLevelFeedbackQueue = 2;
 		cout << "\n\tSCHEDULER: ";
 		switch (choice) {
 		case FirstComeFirstServe:
@@ -38,21 +41,21 @@ namespace sch {
 
 	const int NEW = 0, READY = 1, CPU = 2, IO = 3, TERMINATE = 4;
 
-	int const FirstComeFirstServe = 0, ShortestJobFirst = 1, MultiLevelFeedbackQueue = 2;
-
 }
 
 //simulation
 namespace sch {
 	void CPU_Sim(int schedule_choice) {
-		int quantum[2] = {0, 0};
+		int cycle_limits[2] = {999, 999};
 
-		CPU_Sim_Q(schedule_choice, quantum);
+		CPU_Sim_Q(schedule_choice, cycle_limits);
 	}
 
-	void CPU_Sim_Q(int schedule_choice, int quantum[2]) {
-		int clock, readypos = 0, procpos = 0,
-			bursttime = 0, time_elapsed = 0, total_programs, overhead = 0;
+	void CPU_Sim_Q(int schedule_choice, int cycle_limits[2]) {
+		int clock, schedulepos = 0, readypos = 0,
+			bursttime = 0, time_elapsed = 0, overhead = 0,
+			total_programs = 0,
+			time_quantum = cycle_limits[0], quantum_counter = 0;
 		bool ioburst;
 		vector<PCB> readyQ, cpuQ, ioQ, terminateQ;
 
@@ -73,20 +76,46 @@ namespace sch {
 			//determine which burst is being processed primarily
 			if (readyQ.size() > 0 && cpuQ.size() == 0) {
 				cout << " -- CPU BURST";
-				readypos = selectSchedule(readyQ, schedule_choice);
-				cpuQ.push_back(readyQ[readypos]);
+				schedulepos = selectSchedule(readyQ, schedule_choice);
+				cpuQ.push_back(readyQ[schedulepos]);
 				cpuQ[0].accessed = true;
-				readyQ.erase(readyQ.begin()+readypos);
-				bursttime = cpuQ[0].instructions[cpuQ[0].counter];
+				readyQ.erase(readyQ.begin()+schedulepos);
+				if (cpuQ[0].cpuBurst == 0) {
+					bursttime = cpuQ[0].instructions[cpuQ[0].counter];
+				}
+				else {
+					bursttime = cpuQ[0].cpuBurst;
+				}
 				cout << "\n\tProcessing: P" << cpuQ[0].number << " instruction #" << cpuQ[0].counter << " for " << bursttime << " cycles.";
 				clock++;
 				overhead++;
+				readypos++;
 			}
 			else if (ioQ.size() > 0 && readyQ.size() < 1) {
 				cout << "-- IO BURST";
 				bursttime = longestIO(ioQ);
 				cout << "\n\tSending to IO for " << bursttime << " cycles.";
 			}
+
+			//increment desired quantum queue and reset ready queue position
+			if (readypos == total_programs) {
+				quantum_counter++;
+				readypos = 0;
+			}
+
+			//decide which time quantum queue is appropriate
+			if (quantum_counter < 2) {
+				time_quantum = cycle_limits[quantum_counter];
+			}
+			else if (quantum_counter == 2) {
+				time_quantum = 999;
+			}
+			else if (quantum_counter > 2) {
+				quantum_counter = 0;
+				time_quantum = cycle_limits[quantum_counter];
+			}
+
+			cout << "\n\t\t--Readypos: " << readypos << " ---T_Qantum: " << time_quantum << " ---Counter:" << quantum_counter;
 
 			//start simulation
 			time_elapsed = 0;
@@ -97,22 +126,31 @@ namespace sch {
 				if (readyQ.size() > 0) {
 					addTime(readyQ);
 				}
-				//increase simulation counters
+
+				//increment simulation counters
 				clock++;
 				bursttime--;
 				time_elapsed++;
-				//process IO bursts
+				time_quantum--;
+
+				//process IO bursts	
 				decreaseIO(ioQ);
 				dismissIO(ioQ, readyQ);
+
+				if (time_quantum == 0) {
+					cout << "\n--------------------------------------------------------------QUANTUM RAN OUT";
+					break;
+				}
 			}
 			cout << "\n\tBurst length: " << time_elapsed;
-
+			cout << "\n\t\t---Readypos: " << readypos << " ---T_Qantum: " << time_quantum << " ---Counter:" << quantum_counter;
 
 			if (cpuQ.size()) {
 				cpuQ[0].cputime += time_elapsed;
 
 				//increase process counter
-				cpuQ[0].counter++;
+				
+				if (time_quantum > 0) { cpuQ[0].counter++; }
 
 				cout << "\n\tCpu counter/instructions: " << cpuQ[0].counter << "/" << cpuQ[0].length;
 				
@@ -123,16 +161,25 @@ namespace sch {
 					cpuQ.erase(cpuQ.begin());
 					clock++;
 					overhead++;
-				} 
-				
-				//send process to IO queue after completed CPU burst
-				if (cpuQ.size()) {
-					ioQ.push_back(cpuQ[0]);
-					ioQ.back().ioBurst = ioQ.back().instructions[ioQ.back().counter];
-					cpuQ.erase(cpuQ.begin());
-					clock++;
-					overhead++;
-				}	
+				}
+				else {
+					//send process to IO queue after completed CPU burst
+					if (time_quantum > 0) {
+						cpuQ[0].ioBurst = cpuQ[0].instructions[cpuQ[0].counter];
+						cpuQ[0].cpuBurst = 0;
+						ioQ.push_back(cpuQ[0]);
+						cpuQ.erase(cpuQ.begin());
+						clock++;
+						overhead++;
+					}
+					else {
+						cpuQ[0].cpuBurst = abs(cpuQ[0].instructions[cpuQ[0].counter] - time_elapsed);
+						readyQ.push_back(cpuQ[0]);
+						cpuQ.erase(cpuQ.begin());
+						clock++;
+						overhead++;
+					}	
+				}
 			}
 
 			checkReady(readyQ);
@@ -142,7 +189,9 @@ namespace sch {
 			cout << endl;
 		}
 
-		sayChoice(schedule_choice);
+		//cout << "\ncycle limits = " << cycle_limits[0];
+		int choice = (cycle_limits[0] == 999) ? schedule_choice : 2;
+		sayChoice(choice);
 		showStats(terminateQ, clock, overhead);
 	}
 
@@ -275,8 +324,6 @@ namespace sch {
 			return FCFS();
 		case ShortestJobFirst:
 			return SJF(readyQ);
-		case MultiLevelFeedbackQueue:
-			return FCFS();
 		}
 	}
 

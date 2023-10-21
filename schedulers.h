@@ -18,6 +18,7 @@ namespace sch {
 		int responsetime = 0;
 		int counter = 0;
 		int ioBurst = 0;
+		int cpuBurst = 0;
 		bool accessed = false;
 	};
 	
@@ -33,7 +34,7 @@ namespace sch {
 	// 2. Shortest Job First
 	//Input for Time Quantum:
 	//	
-	void CPU_Sim_Q(int, int[]);
+	void CPU_Sim_Q(int, int[2]);
 
 
 //General simulation commands
