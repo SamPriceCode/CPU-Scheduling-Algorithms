@@ -54,16 +54,15 @@ namespace sch {
 
 	void CPU_Sim_Q(int schedule_choice, int cycle_limits[2]) {
 		//variable declaration
-		int bursttime = 0,		//length of a given CPU or IO burst
+		int clock = 0,			//clock
+			CPU_util = 0.0,		//checks how long the CPU is unused
+			bursttime = 0,		//length of a given CPU or IO burst
 			time_elapsed = 0,	//amount of time a burst lasts
 			scheduler_pos = 0,	//position of process to retrieve from given scheduling algorithm
 			total_programs = 0,	//total amount of programs being processes
 			time_quantum = cycle_limits[0],	//time quantum for a given cycle
 			queue_counter = 0,	//determines which queue is supposed to be used
 			ready_iteration = 0;		//how many processes have been iterated through in the readyQ, used to determine when to swap queues
-		
-		float clock = 0,			//clock 
-			overhead = 0;		//total overhead time
 		
 		vector<PCB> readyQ,		//Ready Queue
 					cpuQ,		//CPU, not a queue but is a vector for sake of compatibility. should only ever contain 1 item.
@@ -82,7 +81,8 @@ namespace sch {
 		//display current process lengths
 		processLengths(readyQ);
 		
-		//start simulation proper
+		//start simulation
+		//everything outside of the main simulation is assumed to happen instantaneously
 		cout << "\n---------------------Start Simulation---------------------";
 		while (terminateQ.size() < total_programs) {
 			//display current clock tick, ready queue size, and IO queue size
@@ -96,7 +96,7 @@ namespace sch {
 				cout << " -- CPU BURST";
 
 				//use desired scheduling algorithm to find process position in ready queue
-				scheduler_pos = selectSchedule(readyQ, schedule_choice, overhead, clock);
+				scheduler_pos = selectSchedule(readyQ, schedule_choice);
 				//send process to CPU
 				cpuQ.push_back(readyQ[scheduler_pos]);
 				//mark that the process has be accessed
@@ -114,11 +114,6 @@ namespace sch {
 				}
 				cout << "\n\tProcessing: P" << cpuQ[0].number + 1 << " instruction #" << cpuQ[0].counter << " for " << bursttime << " cycles.";\
 
-				//increment overhead (Ready Queue -> CPU)
-				overhead += 0.5;
-				//increment clock
-				clock += 0.5;
-
 				//increment
 				ready_iteration++;
 
@@ -126,7 +121,7 @@ namespace sch {
 			}
 			//If there are no processes in the ready queue: IO bound burst
 			else if (ioQ.size() > 0 && readyQ.size() < 1) {
-				cout << "-- IO BURST";
+				cout << " -- IO BURST";
 				bursttime = longestIO(ioQ);
 				cout << "\n\tSending to IO for " << bursttime << " cycles.";
 				CPUburst = false;
@@ -158,15 +153,23 @@ namespace sch {
 
 			//cout << "\n\t\t\t\t---ready_iteration: " << ready_iteration << " ---T_Qantum: " << time_quantum << " ---Counter:" << queue_counter;
 
-			//start simulation
+			//set main simulation time to 0
 			time_elapsed = 0;
 			checkReady(readyQ);
 			checkIO(ioQ);
-
+			//start main simulation
 			while (bursttime > 0) {
 				//add time to any waiting processes
 				if (readyQ.size() > 0) {
 					addTime(readyQ);
+				}
+
+				if (!CPUburst) {
+					CPU_util++;
+
+					if (readyQ.size() > 0) {
+						break;
+					}
 				}
 
 				//increment clock
@@ -182,7 +185,7 @@ namespace sch {
 				decreaseIO(ioQ);
 				
 				//dismiss any finished IO processes to the Ready Queue
-				dismissIO(ioQ, readyQ, overhead);
+				dismissIO(ioQ, readyQ);
 
 				//end current burst if time quantum runs out
 				if (time_quantum == 0) {
@@ -228,10 +231,6 @@ namespace sch {
 						ioQ.push_back(cpuQ[0]);
 						//remove from CPU
 						cpuQ.erase(cpuQ.begin());
-						//increment clock
-						clock+= 0.5;
-						//increment overhead (CPU -> IO Queue)
-						overhead+= 0.5;
 					}
 					//send process back to ready queue is CPU burst is in complete
 					else {
@@ -241,10 +240,6 @@ namespace sch {
 						readyQ.push_back(cpuQ[0]);
 						//remove from CPU
 						cpuQ.erase(cpuQ.begin());
-						//increment clock
-						clock+=0.5;
-						//increment overhead (CPU -> IO Queue)
-						overhead+=0.5;
 					}	
 				}
 			}
@@ -259,7 +254,7 @@ namespace sch {
 		//cout << "\ncycle limits = " << cycle_limits[0];
 		int choice = (cycle_limits[0] == 999) ? schedule_choice : 2;
 		sayChoice(choice);
-		showStats(terminateQ, clock, overhead);
+		showStats(terminateQ, clock, CPU_util);
 	}
 
 }
@@ -318,7 +313,7 @@ namespace sch {
 	}
 
 	//input IO Queue and Ready Queue, returns all ended IO processes to Ready Queue
-	void dismissIO(vector<PCB>& ioQ, vector<PCB>& readyQ, float& overhead) {
+	void dismissIO(vector<PCB>& ioQ, vector<PCB>& readyQ) {
 		for (int i = 0; i < ioQ.size(); i++) {
 			//if IO burst time is 0 or less, return to Ready Queue
 			if (ioQ[i].ioBurst <= 0) {
@@ -328,9 +323,6 @@ namespace sch {
 				readyQ.push_back(ioQ[i]);
 				//remove process from IO Queue
 				ioQ.erase(ioQ.begin() + i);
-
-				//increase overhead
-				overhead += 0.5;
 			}
 		}
 	}
@@ -378,11 +370,11 @@ namespace sch {
 	}
 
 	//prints the waiting, response, and turnaround time for all given processes
-	void showStats(vector<PCB>& procs, float clock, float overhead) {
+	void showStats(vector<PCB>& procs, int clock, int CPU_util) {
 		int turnaround = 0, inits = 0, procnum = 0;
 		//header information including total clock and overhead time
 		cout << "\n-----------------------------------------------------"
-			<< "\n\tClock: " << clock << "\t|\tOverhead: "  << overhead
+			<< "\n\tClock: " << clock << "\t|\tCPU Unused Time: " << CPU_util
 			<< "\n-----------------------------------------------------"
 			<< "\nP#\tTr\tTw\tTcpu\tTio\tTtr";
 		cout << "\t\tInital Instruction Length";
@@ -416,9 +408,8 @@ namespace sch {
 			cout << "\t\t" << inits;
 			
 		}
-		//print total CPU utilization
 		cout << "\n-----------------------------------------------------"
-			<< "\n\tCPU Utilization: " << (1 - overhead / clock) * 100 << "%"
+			<< "\n\tCPU Utilization: " << (1 - (float(CPU_util) / float(clock))) * 100 << "%"
 			<< "\n-----------------------------------------------------";
 	}
 
@@ -429,22 +420,18 @@ namespace sch {
 namespace sch {
 	//input determines scheduling algorithm, 1 = FCFS, 2 = SJF
 	//returns an integer value corresponding to a position in the ready list
-	int selectSchedule(vector<PCB>& readyQ, int choice, float& overhead, float& clock) {
+	int selectSchedule(vector<PCB>& readyQ, int choice) {
 		switch (choice) {
 		case FirstComeFirstServe:
-			return FCFS(overhead, clock);
+			return FCFS();
 		case ShortestJobFirst:
-			return SJF(readyQ, overhead, clock);
+			return SJF(readyQ);
 		}
 	}
 
 	//First Come First Serve Scheduling Algorithm
 	// - return first position the ready queue
-	int FCFS(float& overhead, float& clock) {
-		//increment overhead
-		overhead += 0.25;
-		//increment clock
-		clock += 0.25;
+	int FCFS() {
 		//yes really that's it, it just loads the top of the ready queue
 		//honestly kinda funny
 		//this is also the tertiary scheduling algorithm for MLFQ
@@ -454,17 +441,13 @@ namespace sch {
 	//Shortest Job First Scheduling Algorithm
 	// - finds the process with the lowest burst length
 	// - returns it's position the ready queue
-	int SJF(vector<PCB>& readyQ, float& overhead, float& clock) {
+	int SJF(vector<PCB>& readyQ) {
 		//sets first Ready queue item as the test
 		PCB test = readyQ[0];
 		//initalize shortest length as zero
 		int shortest_length = 0;
 		//iterate through entire ready queue
-		for (int i = 1; i < readyQ.size(); i++) {
-			//increment overhead (comparisons count towards overhead, but not as much)
-			overhead += 0.25;
-			//increment clock
-			clock += 0.25;
+		for (int i = 1; i < readyQ.size(); i++) {	
 			//test to see if any following instruction has a shorter burst time
 			//if yes, make it the new shortest length
 			if (readyQ[i].instructions[readyQ[i].counter] < test.instructions[test.counter]) {

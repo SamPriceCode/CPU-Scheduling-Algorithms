@@ -77,7 +77,7 @@ namespace sch {
 	void decreaseIO(vector<PCB>&);
 
 	//returns any finished process in the IO Queue to the Ready Queue
-	void dismissIO(vector<PCB>&, vector<PCB>&, float&);
+	void dismissIO(vector<PCB>&, vector<PCB>&);
 
 	//prints remaining IO burst time for all processes in IO Queue
 	void checkIO(vector<PCB>&);
@@ -92,23 +92,23 @@ namespace sch {
 	void processLengths(vector<PCB>&);
 
 	//prints the waiting, response, and turnaround time for all given processes
-	void showStats(vector<PCB>&, float, float);
+	void showStats(vector<PCB>&, int, int);
 
 
 //Scheduling Functions
 
 	//input determines scheduling algorithm, 1 = FCFS, 2 = SJF
 	//returns an integer value corresponding to a position in the ready list
-	int selectSchedule(vector<PCB>&, int, float&, float&);
+	int selectSchedule(vector<PCB>&, int);
 
 	//First Come First Serve Scheduling Algorithm
 	// - return first position the ready queue
-	int FCFS(float&, float&);
+	int FCFS();
 
 	//Shortest Job First Scheduling Algorithm
 	// - finds the process with the lowest burst length
 	// - returns it's position the ready queue
-	int SJF(vector<PCB>&, float&, float&);
+	int SJF(vector<PCB>&);
 }
 
 #endif
