@@ -55,7 +55,7 @@ namespace sch {
 	void CPU_Sim_Q(int schedule_choice, int cycle_limits[2]) {
 		//variable declaration
 		int clock = 0,			//clock
-			CPU_util = 0.0,		//checks how long the CPU is unused
+			CPU_unused = 0.0,		//checks how long the CPU is unused
 			bursttime = 0,		//length of a given CPU or IO burst
 			time_elapsed = 0,	//amount of time a burst lasts
 			scheduler_pos = 0,	//position of process to retrieve from given scheduling algorithm
@@ -165,7 +165,7 @@ namespace sch {
 				}
 
 				if (!CPUburst) {
-					CPU_util++;
+					CPU_unused++;
 
 					if (readyQ.size() > 0) {
 						break;
@@ -254,7 +254,7 @@ namespace sch {
 		//cout << "\ncycle limits = " << cycle_limits[0];
 		int choice = (cycle_limits[0] == 999) ? schedule_choice : 2;
 		sayChoice(choice);
-		showStats(terminateQ, clock, CPU_util);
+		showStats(terminateQ, clock, CPU_unused);
 	}
 
 }
@@ -370,11 +370,11 @@ namespace sch {
 	}
 
 	//prints the waiting, response, and turnaround time for all given processes
-	void showStats(vector<PCB>& procs, int clock, int CPU_util) {
+	void showStats(vector<PCB>& procs, int clock, int CPU_unused) {
 		int turnaround = 0, inits = 0, procnum = 0;
 		//header information including total clock and overhead time
 		cout << "\n-----------------------------------------------------"
-			<< "\n\tClock: " << clock << "\t|\tCPU Unused Time: " << CPU_util
+			<< "\n\tClock: " << clock << "\t|\tCPU Unused Time: " << CPU_unused
 			<< "\n-----------------------------------------------------"
 			<< "\nP#\tTr\tTw\tTcpu\tTio\tTtr";
 		cout << "\t\tInital Instruction Length";
@@ -409,7 +409,7 @@ namespace sch {
 			
 		}
 		cout << "\n-----------------------------------------------------"
-			<< "\n\tCPU Utilization: " << (1 - (float(CPU_util) / float(clock))) * 100 << "%"
+			<< "\n\tCPU Utilization: " << (1 - (float(CPU_unused) / float(clock))) * 100 << "%"
 			<< "\n-----------------------------------------------------";
 	}
 
