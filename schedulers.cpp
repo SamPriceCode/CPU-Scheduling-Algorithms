@@ -53,44 +53,77 @@ namespace sch {
 	}
 
 	void CPU_Sim_Q(int schedule_choice, int cycle_limits[2]) {
-		int clock, schedulepos = 0, readypos = 0,
-			bursttime = 0, time_elapsed = 0, overhead = 0,
-			total_programs = 0,
-			time_quantum = cycle_limits[0], quantum_counter = 0;
-		bool ioburst;
-		vector<PCB> readyQ, cpuQ, ioQ, terminateQ;
+		//variable declaration
+		int clock = 0,			//clock
+			bursttime = 0,		//length of a given CPU or IO burst
+			time_elapsed = 0,	//amount of time a burst lasts
+			scheduler_pos = 0,	//position of process to retrieve from given scheduling algorithm
+			total_programs = 0,	//total amount of programs being processes
+			time_quantum = cycle_limits[0],	//time quantum for a given cycle
+			queue_counter = 0,	//determines which queue is supposed to be used
+			ready_pos = 0;		//how many processes have been iterated through in the readyQ, used to determine when to swap queues
+		
+		float overhead = 0;		//total overhead time
+		
+		vector<PCB> readyQ,		//Ready Queue
+					cpuQ,		//CPU, not a queue but is a vector for sake of compatibility. should only ever contain 1 item.
+					ioQ,		//IO Queue
+					terminateQ;	//Terminate Queue, basically moot, only exists to send to stats function afterwards
 
-		vector<int> ioBurst;
+		//load programs into ready queue (they all arrive at zero as per assignment instructions)
 		loadPrograms(readyQ);
+
+		//find total number of programs (it's 8 but who wants to hard-code things?)
 		total_programs = readyQ.size();
 
+		//display current process lengths
 		processLengths(readyQ);
-
-		clock = 0;
+		
+		//start simulation proper
 		cout << "\n---------------------Start Simulation---------------------";
-		cout << terminateQ.size();
 		while (terminateQ.size() < total_programs) {
+			//display current clock tick, ready queue size, and IO queue size
 			cout << "\nClock #: " << clock
 				<< " - Ready Queue size: " << readyQ.size()
 				<< " - I/O Queue size: " << ioQ.size();
 
-			//determine which burst is being processed primarily
-			if (readyQ.size() > 0 && cpuQ.size() == 0) {
+			//determine which burst is being processed
+			//If there is a process in the ready queue: CPU bound burst
+			//If there are no processes in the ready queue: IO bound burst
+			if (readyQ.size() > 0) {
 				cout << " -- CPU BURST";
-				schedulepos = selectSchedule(readyQ, schedule_choice);
-				cpuQ.push_back(readyQ[schedulepos]);
+				//use desired scheduling algorithm to find process position in ready queue
+				scheduler_pos = selectSchedule(readyQ, schedule_choice);
+				//send process to CPU
+				cpuQ.push_back(readyQ[scheduler_pos]);
+				//determine overhead for scheduling algorithm
+				switch (schedule_choice) {
+				case FirstComeFirstServe:
+					overhead += 0.5;
+					break;
+				case ShortestJobFirst:
+					overhead += 1;
+					break;
+				}
+				//mark that the process has be accessed
 				cpuQ[0].accessed = true;
-				readyQ.erase(readyQ.begin()+schedulepos);
+				//remove from ready queue
+				readyQ.erase(readyQ.begin()+scheduler_pos);
+				//if there is no leftover CPU burst, use current instruction
 				if (cpuQ[0].cpuBurst == 0) {
 					bursttime = cpuQ[0].instructions[cpuQ[0].counter];
 				}
+				//if there is a leftover CPU burst, finish it
 				else {
 					bursttime = cpuQ[0].cpuBurst;
 				}
-				cout << "\n\tProcessing: P" << cpuQ[0].number << " instruction #" << cpuQ[0].counter << " for " << bursttime << " cycles.";
+				cout << "\n\tProcessing: P" << cpuQ[0].number << " instruction #" << cpuQ[0].counter << " for " << bursttime << " cycles.";\
+				//increment clock
 				clock++;
-				overhead++;
-				readypos++;
+				//increment overhead time(because a process was moved from readyQ to CPU)
+				overhead += 0.5;
+				//increment
+				ready_pos++;
 			}
 			else if (ioQ.size() > 0 && readyQ.size() < 1) {
 				cout << "-- IO BURST";
@@ -99,79 +132,98 @@ namespace sch {
 			}
 
 			//increment desired quantum Queue and reset ready Queue position
-			if (readypos == total_programs) {
-				quantum_counter++;
-				readypos = 0;
+			if (ready_pos == total_programs) {
+				queue_counter++;
+				ready_pos = 0;
 			}
 
 			//decide which time quantum Queue is appropriate
-			if (quantum_counter < 2) {
-				time_quantum = cycle_limits[quantum_counter];
+			if (queue_counter < 2) {
+				time_quantum = cycle_limits[queue_counter];
 			}
-			else if (quantum_counter == 2) {
+			else if (queue_counter == 2) {
 				time_quantum = 999;
 			}
-			else if (quantum_counter > 2) {
-				quantum_counter = 0;
-				time_quantum = cycle_limits[quantum_counter];
+			else if (queue_counter > 2) {
+				queue_counter = 0;
+				time_quantum = cycle_limits[queue_counter];
 			}
 
-			cout << "\n\t\t--Readypos: " << readypos << " ---T_Qantum: " << time_quantum << " ---Counter:" << quantum_counter;
+			//cout << "\n\t\t\t\t---ready_pos: " << ready_pos << " ---T_Qantum: " << time_quantum << " ---Counter:" << queue_counter;
 
 			//start simulation
 			time_elapsed = 0;
 			checkReady(readyQ);
 			checkIO(ioQ);
+
 			while (bursttime > 0) {
 				//add time to any waiting processes
 				if (readyQ.size() > 0) {
 					addTime(readyQ);
 				}
 
-				//increment simulation counters
+				//increment clock
 				clock++;
+				//decrement current burst time left
 				bursttime--;
+				//increment the amount of time elapsed in the current burst
 				time_elapsed++;
+				//decrement amount time quantum left in cycle
 				time_quantum--;
 
-				//process IO bursts	
+				//decrease burst counter for all executing IO processes
 				decreaseIO(ioQ);
-				dismissIO(ioQ, readyQ);
 
+				//dismiss any finished IO processes to the Ready Queue
+				dismissIO(ioQ, readyQ, overhead);
+
+				//end current burst if time quantum runs out
 				if (time_quantum == 0) {
-					cout << "\n--------------------------------------------------------------QUANTUM RAN OUT";
+					//cout << "\n\t\t\t\t-----TIME QUANTUM RAN OUT";
 					break;
 				}
 			}
+		
+			
+			//output how long the burst lasted
 			cout << "\n\tBurst length: " << time_elapsed;
-			cout << "\n\t\t---Readypos: " << readypos << " ---T_Qantum: " << time_quantum << " ---Counter:" << quantum_counter;
+			//cout << "\n\t\t\t\t---ready_pos: " << ready_pos << " ---T_Qantum: " << time_quantum << " ---Counter:" << queue_counter;
 
+			//handle process currently in CPU
 			if (cpuQ.size()) {
+				//increase total running CPU time
 				cpuQ[0].cputime += time_elapsed;
 
-				//increase process counter
-				
+				//increase process counter if CPU burst was completed	
 				if (time_quantum > 0) { cpuQ[0].counter++; }
 
+				//output current couonter position out of total instruction length
 				cout << "\n\tCpu counter/instructions: " << cpuQ[0].counter << "/" << cpuQ[0].length;
 				
 				//terminate finished process
 				if (cpuQ[0].counter >= cpuQ[0].length) {
 					cout << "\n\tTerminating process P" << cpuQ[0].number;
+					//add to Terminate Queue
 					terminateQ.push_back(cpuQ[0]);
+					//remmove from CPU
 					cpuQ.erase(cpuQ.begin());
-					clock++;
-					overhead++;
+					//increment clock
 				}
 				else {
 					//send process to IO Queue after completed CPU burst
 					if (time_quantum > 0) {
+						//set current IO burst length to be decremented later
 						cpuQ[0].ioBurst = cpuQ[0].instructions[cpuQ[0].counter];
+						//set CPU burst to 0; it's finished!!
 						cpuQ[0].cpuBurst = 0;
+						//send to IO Queue
 						ioQ.push_back(cpuQ[0]);
+						//remove from CPU
 						cpuQ.erase(cpuQ.begin());
+						//increment clock
 						clock++;
-						overhead++;
+						//increment overhead (CPU -> IO Queue)
+						overhead+= 0.5;
 					}
 					else {
 						cpuQ[0].cpuBurst = abs(cpuQ[0].instructions[cpuQ[0].counter] - time_elapsed);
@@ -230,30 +282,28 @@ namespace sch {
 		}
 	}
 	
-	//prints all current processes in ready Queue
+	//prints all current processes in ready Queue and the current waiting time
 	void checkReady(vector<PCB>& readyQ) {
-		cout << "\n\t\tProcesses in readyQ:\n\t\t\t";
+		cout << "\n\t\tProcesses in readyQ:";
 		for (int i = 0; i < readyQ.size(); i++) {
-			cout << "P" << readyQ[i].number;
-			if (i < readyQ.size() - 1) {
-				cout << ", ";
-			}
+			cout << "\n\t\t\tP" << readyQ[i].number + 1 << " = " << readyQ[i].waittime;
 		}
 	}
 
 	//decrease given ioBurst time for all processes in IO Queue
 	void decreaseIO(vector<PCB>& ioQ) {
 		for (int i = 0; i < ioQ.size(); i++) {
-			//decreases IO burst time
-			ioQ[i].ioBurst--;
-			//increase total IO execution time
-			ioQ[i].iotime++;
+			if (ioQ[i].ioBurst > 0) {
+				//decreases IO burst time
+				ioQ[i].ioBurst--;
+				//increase total IO execution time
+				ioQ[i].iotime++;
+			}
 		}
-
 	}
 
 	//input IO Queue and Ready Queue, returns all ended IO processes to Ready Queue
-	void dismissIO(vector<PCB>& ioQ, vector<PCB>& readyQ) {
+	void dismissIO(vector<PCB>& ioQ, vector<PCB>& readyQ, float& overhead) {
 		for (int i = 0; i < ioQ.size(); i++) {
 			//if IO burst time is 0 or less, return to Ready Queue
 			if (ioQ[i].ioBurst <= 0) {
@@ -263,6 +313,9 @@ namespace sch {
 				readyQ.push_back(ioQ[i]);
 				//remove process from IO Queue
 				ioQ.erase(ioQ.begin() + i);
+
+				//increase overhead
+				overhead += 0.5;
 			}
 		}
 	}
@@ -271,7 +324,7 @@ namespace sch {
 	void checkIO(vector<PCB>& ioQ) {
 		cout << "\n\t\t" << "Processes in ioQ:";
 		for (int i = 0; i < ioQ.size(); i++) {
-			cout << "\n\t\t\tP" << ioQ[i].number << " - " << ioQ[i].ioBurst << "/" << ioQ[i].instructions[ioQ[i].counter];
+			cout << "\n\t\t\tP" << ioQ[i].number + 1 << " - " << ioQ[i].ioBurst << "/" << ioQ[i].instructions[ioQ[i].counter];
 		}
 	}
 
@@ -289,7 +342,7 @@ namespace sch {
 	//gets length of a process's instructions
 	int getInstructionLength(const int process[], int number) {
 		int i = 0, length = 0;
-		cout << "\nP" << number << ": {  ";
+		cout << "\nP" << number + 1 << ": {  ";
 		//keep iterating through process until sentinel value is hit
 		while (process[i] != SENTINEL) {
 			cout << process[i] << "  ";
@@ -305,7 +358,7 @@ namespace sch {
 	void processLengths(vector<PCB>& readyQ) {
 		cout << "\n\nProcess instructions lengths:";
 		for (int i = 0; i < readyQ.size(); i++) {
-			cout << "\n\tProcess " << i << ": " << readyQ[i].length;
+			cout << "\n\tProcess " << i + 1<< ": " << readyQ[i].length;
 		}
 	}
 
@@ -317,7 +370,7 @@ namespace sch {
 			<< "\n\tClock: " << clock << "\t|\tOverhead: "  << overhead
 			<< "\n-----------------------------------------------------"
 			<< "\nP#\tTr\tTw\tTcpu\tTio\tTtr";
-		//cout << "\t\tInital Instruction Length"
+		cout << "\t\tInital Instruction Length";
 		for (int i = 0; i < 8; i++) {
 			turnaround = 0;
 			inits = 0;
@@ -334,16 +387,16 @@ namespace sch {
 				<< "\t" << procs[i].iotime
 				<< "\t" << procs[i].cputime + procs[i].iotime + procs[i].waittime;
 			//this section is test code used to make sure the Tcpu and Tio times are correct
-			/*
+			
 			for (int j = 0; j < procs[i].length; j++) {
 				inits += procs[i].instructions[j];	
 			}
 			cout << "\t\t" << inits;
-			*/
+			
 		}
 		//print total CPU utilization
 		cout << "\n-----------------------------------------------------"
-			<< "\n\tCPU Utilization: " << (1 - float(overhead) / float(clock)) * 100 << "%"
+			<< "\n\tCPU Utilization: " << (1 - overhead / float(clock)) * 100 << "%"
 			<< "\n-----------------------------------------------------";
 	}
 
@@ -352,7 +405,8 @@ namespace sch {
 
 //schedulers
 namespace sch {
-	//determines scheduling algorithm, 1 = FCFS, 2 = SJF
+	//input determines scheduling algorithm, 1 = FCFS, 2 = SJF
+	//returns an integer value corresponding to a position in the ready list
 	int selectSchedule(vector<PCB>& readyQ, int choice) {
 		switch (choice) {
 		case FirstComeFirstServe:

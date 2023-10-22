@@ -77,7 +77,7 @@ namespace sch {
 	void decreaseIO(vector<PCB>&);
 
 	//returns any finished process in the IO Queue to the Ready Queue
-	void dismissIO(vector<PCB>&, vector<PCB>&);
+	void dismissIO(vector<PCB>&, vector<PCB>&, float&);
 
 	//prints remaining IO burst time for all processes in IO Queue
 	void checkIO(vector<PCB>&);
@@ -97,7 +97,8 @@ namespace sch {
 
 //Scheduling Functions
 
-	//determines scheduling algorithm, 1 = FCFS, 2 = SJF
+	//input determines scheduling algorithm, 1 = FCFS, 2 = SJF
+	//returns an integer value corresponding to a position in the ready list
 	int selectSchedule(vector<PCB>&, int);
 
 	//First Come First Serve Scheduling Algorithm
