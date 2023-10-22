@@ -122,7 +122,7 @@ namespace sch {
 			//If there are no processes in the ready queue: IO bound burst
 			else if (ioQ.size() > 0 && readyQ.size() < 1) {
 				cout << " -- IO BURST";
-				bursttime = longestIO(ioQ);
+				bursttime = shortestIO(ioQ);
 				cout << "\n\tSending to IO for " << bursttime << " cycles.";
 				CPUburst = false;
 			}
@@ -148,6 +148,7 @@ namespace sch {
 				}
 			}
 			else {
+				//IO proceses are not limited by time quantum
 				time_quantum = 999;
 			}
 
@@ -159,17 +160,14 @@ namespace sch {
 			checkIO(ioQ);
 			//start main simulation
 			while (bursttime > 0) {
+				//add unused CPU time
+				if (!CPUburst) {
+					CPU_unused++;
+				}
+
 				//add time to any waiting processes
 				if (readyQ.size() > 0) {
 					addTime(readyQ);
-				}
-
-				if (!CPUburst) {
-					CPU_unused++;
-
-					if (readyQ.size() > 0) {
-						break;
-					}
 				}
 
 				//increment clock
@@ -295,20 +293,19 @@ namespace sch {
 	void checkReady(vector<PCB>& readyQ) {
 		cout << "\n\t\tProcesses in readyQ:";
 		for (int i = 0; i < readyQ.size(); i++) {
-			cout << "\n\t\t\tP" << readyQ[i].number + 1 << " = " << readyQ[i].waittime
-				<< " = " << readyQ[i].counter << "/" << readyQ[i].length;
+			cout << "\n\t\t\tP" << readyQ[i].number + 1 << " -- " << readyQ[i].counter << "/" << readyQ[i].length
+			<< ", Tw = " << readyQ[i].waittime;
+				
 		}
 	}
 
 	//decrease given ioBurst time for all processes in IO Queue
 	void decreaseIO(vector<PCB>& ioQ) {
 		for (int i = 0; i < ioQ.size(); i++) {
-			if (ioQ[i].ioBurst > 0) {
-				//decreases IO burst time
-				ioQ[i].ioBurst--;
-				//increase total IO execution time
-				ioQ[i].iotime++;
-			}
+			//decreases IO burst time
+			ioQ[i].ioBurst--;
+			//increase total IO execution time
+			ioQ[i].iotime++;
 		}
 	}
 
@@ -336,14 +333,14 @@ namespace sch {
 	}
 
 	//finds the process with the longest current remaining IO burst
-	int longestIO(vector<PCB>& ioQ) {
-		int longest = ioQ[0].ioBurst;
+	int shortestIO(vector<PCB>& ioQ) {
+		int shortest = ioQ[0].ioBurst;
 		for (int i = 1; i < ioQ.size(); i++) {
-			if (ioQ[i].ioBurst > longest) {
-				longest = ioQ[i].ioBurst;
+			if (ioQ[i].ioBurst < shortest) {
+				shortest = ioQ[i].ioBurst;
 			}
 		}
-		return longest;
+		return shortest;
 	}
 
 	//gets length of a process's instructions

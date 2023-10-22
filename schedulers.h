@@ -83,7 +83,7 @@ namespace sch {
 	void checkIO(vector<PCB>&);
 
 	//finds the process with the longest current remaining IO burst
-	int longestIO(vector<PCB>&);
+	int shortestIO(vector<PCB>&);
 
 	//gets length of a process's instructions
 	int getInstructionLength(const int[], int);
