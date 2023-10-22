@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 
-using namespace std;
+using namespace std; // <- this is bad practice, I know. pleae forgive my sins.
 
 namespace sch {
 //Process Control Board Structure
@@ -92,23 +92,23 @@ namespace sch {
 	void processLengths(vector<PCB>&);
 
 	//prints the waiting, response, and turnaround time for all given processes
-	void showStats(vector<PCB>&, int, int);
+	void showStats(vector<PCB>&, float, float);
 
 
 //Scheduling Functions
 
 	//input determines scheduling algorithm, 1 = FCFS, 2 = SJF
 	//returns an integer value corresponding to a position in the ready list
-	int selectSchedule(vector<PCB>&, int, float&);
+	int selectSchedule(vector<PCB>&, int, float&, float&);
 
 	//First Come First Serve Scheduling Algorithm
 	// - return first position the ready queue
-	int FCFS(float&);
+	int FCFS(float&, float&);
 
 	//Shortest Job First Scheduling Algorithm
 	// - finds the process with the lowest burst length
 	// - returns it's position the ready queue
-	int SJF(vector<PCB>&, float&);
+	int SJF(vector<PCB>&, float&, float&);
 }
 
 #endif
