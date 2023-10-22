@@ -71,6 +71,7 @@ namespace sch {
 					terminateQ;	//Terminate Queue, basically moot, only exists to send to stats function afterwards
 
 		//load programs into ready queue (they all arrive at zero as per assignment instructions)
+		//not considered overhead
 		loadPrograms(readyQ);
 
 		//find total number of programs (it's 8 but who wants to hard-code things?)
@@ -93,18 +94,9 @@ namespace sch {
 			if (readyQ.size() > 0) {
 				cout << " -- CPU BURST";
 				//use desired scheduling algorithm to find process position in ready queue
-				scheduler_pos = selectSchedule(readyQ, schedule_choice);
+				scheduler_pos = selectSchedule(readyQ, schedule_choice, overhead);
 				//send process to CPU
 				cpuQ.push_back(readyQ[scheduler_pos]);
-				//determine overhead for scheduling algorithm
-				switch (schedule_choice) {
-				case FirstComeFirstServe:
-					overhead += 0.5;
-					break;
-				case ShortestJobFirst:
-					overhead += 1;
-					break;
-				}
 				//mark that the process has be accessed
 				cpuQ[0].accessed = true;
 				//remove from ready queue
@@ -120,7 +112,7 @@ namespace sch {
 				cout << "\n\tProcessing: P" << cpuQ[0].number << " instruction #" << cpuQ[0].counter << " for " << bursttime << " cycles.";\
 				//increment clock
 				clock++;
-				//increment overhead time(because a process was moved from readyQ to CPU)
+				//increment overhead (Ready Queue -> CPU)
 				overhead += 0.5;
 				//increment
 				ready_pos++;
@@ -407,18 +399,20 @@ namespace sch {
 namespace sch {
 	//input determines scheduling algorithm, 1 = FCFS, 2 = SJF
 	//returns an integer value corresponding to a position in the ready list
-	int selectSchedule(vector<PCB>& readyQ, int choice) {
+	int selectSchedule(vector<PCB>& readyQ, int choice, float& overhead) {
 		switch (choice) {
 		case FirstComeFirstServe:
-			return FCFS();
+			return FCFS(overhead);
 		case ShortestJobFirst:
-			return SJF(readyQ);
+			return SJF(readyQ, overhead);
 		}
 	}
 
 	//First Come First Serve Scheduling Algorithm
 	// - return first position the ready queue
-	int FCFS() {
+	int FCFS(float& overhead) {
+		//increment overhead
+		overhead += 0.5;
 		//yes really that's it, it just loads the top of the ready queue
 		//honestly kinda funny
 		//this is also the tertiary scheduling algorithm for MLFQ
@@ -428,13 +422,15 @@ namespace sch {
 	//Shortest Job First Scheduling Algorithm
 	// - finds the process with the lowest burst length
 	// - returns it's position the ready queue
-	int SJF(vector<PCB>& readyQ) {
+	int SJF(vector<PCB>& readyQ, float& overhead) {
 		//sets first Ready queue item as the test
 		PCB test = readyQ[0];
 		//initalize shortest length as zero
 		int shortest_length = 0;
 		//iterate through entire ready queue
 		for (int i = 1; i < readyQ.size(); i++) {
+			//increment overhead
+			overhead += 0.25;
 			//test to see if any following instruction has a shorter burst time
 			//if yes, make it the new shortest length
 			if (readyQ[i].instructions[readyQ[i].counter] < test.instructions[test.counter]) {
