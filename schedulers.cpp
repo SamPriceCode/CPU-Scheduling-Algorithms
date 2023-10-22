@@ -60,7 +60,7 @@ namespace sch {
 			time_elapsed = 0,	//amount of time a burst lasts
 			scheduler_pos = 0,	//position of process to retrieve from given scheduling algorithm
 			total_programs = 0,	//total amount of programs being processes
-			time_quantum = cycle_limits[0],	//time quantum for a given cycle
+			time_quantum = cycle_limits[0],	//time quantum for a given cycle, starts at Queue 1
 			queue_counter = 0,	//determines which queue is supposed to be used
 			ready_iteration = 0;		//how many processes have been iterated through in the readyQ, used to determine when to swap queues
 		
@@ -72,7 +72,6 @@ namespace sch {
 		bool CPUburst = false;
 
 		//load programs into ready queue (they all arrive at zero as per assignment instructions)
-		//not considered overhead
 		loadPrograms(readyQ);
 
 		//find total number of programs (it's 8 but who wants to hard-code things?)
@@ -117,13 +116,18 @@ namespace sch {
 				//increment
 				ready_iteration++;
 
+				//declare that this is a CPU burst
 				CPUburst = true;
 			}
 			//If there are no processes in the ready queue: IO bound burst
 			else if (ioQ.size() > 0 && readyQ.size() < 1) {
 				cout << " -- IO BURST";
+
+				//determine shortest queued IO process
 				bursttime = shortestIO(ioQ);
 				cout << "\n\tSending to IO for " << bursttime << " cycles.";
+
+				//declare that this is not a CPU burst
 				CPUburst = false;
 			}
 
@@ -136,12 +140,15 @@ namespace sch {
 				}
 
 				//decide which time quantum Queue is appropriate
+				//set to queue 2
 				if (queue_counter < 2) {
 					time_quantum = cycle_limits[queue_counter];
 				}
+				//set to queue 3
 				else if (queue_counter == 2) {
 					time_quantum = 999;
 				}
+				//reset to queue 0
 				else if (queue_counter > 2) {
 					queue_counter = 0;
 					time_quantum = cycle_limits[queue_counter];
@@ -156,9 +163,12 @@ namespace sch {
 
 			//set main simulation time to 0
 			time_elapsed = 0;
+
+			//output Ready and IO Queue before execution
 			checkReady(readyQ);
 			checkIO(ioQ);
-			//start main simulation
+
+			//start burst execution
 			while (bursttime > 0) {
 				//add unused CPU time
 				if (!CPUburst) {
@@ -242,6 +252,7 @@ namespace sch {
 				}
 			}
 
+			//output Ready and IO Queue after execution
 			checkReady(readyQ);
 			checkIO(ioQ);
 
@@ -249,8 +260,9 @@ namespace sch {
 			cout << endl;
 		}
 
-		//cout << "\ncycle limits = " << cycle_limits[0];
+		//determine if MLFQ was used
 		int choice = (cycle_limits[0] == 999) ? schedule_choice : 2;
+
 		sayChoice(choice);
 		showStats(terminateQ, clock, CPU_unused);
 	}
@@ -375,6 +387,7 @@ namespace sch {
 			<< "\n-----------------------------------------------------"
 			<< "\nP#\tTr\tTw\tTcpu\tTio\tTtr";
 		cout << "\t\tInital Instruction Length";
+
 		for (int i = 0; i < 8; i++) {
 			for (int j = 0; j < 8; j++) {
 				if (procs[j].number == i) {
@@ -405,6 +418,7 @@ namespace sch {
 			cout << "\t\t" << inits;
 			
 		}
+
 		cout << "\n-----------------------------------------------------"
 			<< "\n\tCPU Utilization: " << (1 - (float(CPU_unused) / float(clock))) * 100 << "%"
 			<< "\n-----------------------------------------------------";
