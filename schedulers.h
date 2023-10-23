@@ -1,3 +1,5 @@
+//Sam Price COP4610
+
 #ifndef SCHEDULERS_H
 #define SCHEDULERS_H
 
@@ -5,7 +7,7 @@
 #include <vector>
 #include <string>
 
-using namespace std; // <- this is bad practice, I know. pleae forgive my sins.
+using namespace std;
 
 namespace sch {
 //Process Control Board Structure
@@ -59,7 +61,7 @@ namespace sch {
 	//	2. Shortest Job First
 	//Input for Time Quantum:
 	//	must be an int array with 2 items
-	void CPU_Sim_Q(int, int[2]);
+	void CPU_Sim_Tq(int, int[2]);
 
 
 //General Simulation Commands

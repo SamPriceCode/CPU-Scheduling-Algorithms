@@ -1,3 +1,5 @@
+//Sam Price COP4610
+
 #include "schedulers.h"
 #include <iostream>
 #include <vector>
@@ -47,20 +49,20 @@ namespace sch {
 //simulation
 namespace sch {
 	void CPU_Sim(int schedule_choice) {
-		int cycle_limits[2] = {999, 999};
+		int time_quanta[2] = {999, 999};
 
-		CPU_Sim_Q(schedule_choice, cycle_limits);
+		CPU_Sim_Tq(schedule_choice, time_quanta);
 	}
 
-	void CPU_Sim_Q(int schedule_choice, int cycle_limits[2]) {
+	void CPU_Sim_Tq(int schedule_choice, int time_quanta[2]) {
 		//variable declaration
 		int clock = 0,			//clock
-			CPU_unused = 0.0,		//checks how long the CPU is unused
+			CPU_unused = 0,		//checks how long the CPU is unused
 			bursttime = 0,		//length of a given CPU or IO burst
 			time_elapsed = 0,	//amount of time a burst lasts
 			scheduler_pos = 0,	//position of process to retrieve from given scheduling algorithm
 			total_programs = 0,	//total amount of programs being processes
-			time_quantum = cycle_limits[0],	//time quantum for a given cycle, starts at Queue 1
+			time_quantum = time_quanta[0],	//time quantum for a given cycle, starts at Queue 1
 			queue_counter = 0,	//determines which queue is supposed to be used
 			ready_iteration = 0;		//how many processes have been iterated through in the readyQ, used to determine when to swap queues
 		
@@ -111,7 +113,7 @@ namespace sch {
 				else {
 					bursttime = cpuQ[0].cpuBurst;
 				}
-				cout << "\n\tProcessing: P" << cpuQ[0].number + 1 << " instruction #" << cpuQ[0].counter << " for " << bursttime << " cycles.";\
+				cout << "\n\tProcessing: P" << cpuQ[0].number + 1 << " instruction #" << cpuQ[0].counter << " for " << bursttime << " ticks.";\
 
 				//increment
 				ready_iteration++;
@@ -125,7 +127,7 @@ namespace sch {
 
 				//determine shortest queued IO process
 				bursttime = shortestIO(ioQ);
-				cout << "\n\tSending to IO for " << bursttime << " cycles.";
+				cout << "\n\tSending to IO for " << bursttime << " ticks.";
 
 				//declare that this is not a CPU burst
 				CPUburst = false;
@@ -142,7 +144,7 @@ namespace sch {
 				//decide which time quantum Queue is appropriate
 				//set to queue 2
 				if (queue_counter < 2) {
-					time_quantum = cycle_limits[queue_counter];
+					time_quantum = time_quanta[queue_counter];
 				}
 				//set to queue 3
 				else if (queue_counter == 2) {
@@ -151,7 +153,7 @@ namespace sch {
 				//reset to queue 0
 				else if (queue_counter > 2) {
 					queue_counter = 0;
-					time_quantum = cycle_limits[queue_counter];
+					time_quantum = time_quanta[queue_counter];
 				}
 			}
 			else {
@@ -159,7 +161,8 @@ namespace sch {
 				time_quantum = 999;
 			}
 
-			//cout << "\n\t\t\t\t---ready_iteration: " << ready_iteration << " ---T_Qantum: " << time_quantum << " ---Counter:" << queue_counter;
+			//Time quantum flags were removed because they are annoying to look at. Added current time quantum to fail state.
+			cout << "\n\t\t---ready_iteration: " << ready_iteration << " ---T_Qantum: " << time_quantum << " ---Counter:" << queue_counter;
 
 			//set main simulation time to 0
 			time_elapsed = 0;
@@ -186,6 +189,7 @@ namespace sch {
 				bursttime--;
 				//increment the amount of time elapsed in the current burst
 				time_elapsed++;
+
 				//decrement amount time quantum left in cycle
 				time_quantum--;
 
@@ -196,8 +200,9 @@ namespace sch {
 				dismissIO(ioQ, readyQ);
 
 				//end current burst if time quantum runs out
-				if (time_quantum == 0) {
-					cout << "\n\t\t\t\t------------------TIME QUANTUM RAN OUT";
+				if (time_quantum == 0 && bursttime > 0) {
+					time_quantum = -1;
+					cout << "\n\t------------------TIME QUANTUM RAN OUT";
 					break;
 				}
 			}
@@ -205,7 +210,7 @@ namespace sch {
 			//output how long the burst lasted
 			cout << "\n\tBurst length: " << time_elapsed;
 			
-			//cout << "\n\t\t\t\t---ready_iteration: " << ready_iteration << " ---T_Qantum: " << time_quantum << " ---Counter:" << queue_counter;
+			cout << "\n\t\t---ready_iteration: " << ready_iteration << " ---T_Qantum: " << time_quantum << " ---Counter:" << queue_counter;
 
 			//handle process currently in CPU
 			if (cpuQ.size()) {
@@ -213,7 +218,7 @@ namespace sch {
 				cpuQ[0].cputime += time_elapsed;
 
 				//increase process counter if CPU burst was completed	
-				if (time_quantum > 0) { cpuQ[0].counter++; }
+				if (time_quantum >= 0) { cpuQ[0].counter++; }
 
 				//output current couonter position out of total instruction length
 				//cout << "\n\tCpu counter/instructions: " << cpuQ[0].counter << "/" << cpuQ[0].length;
@@ -230,7 +235,7 @@ namespace sch {
 				}
 				else {
 					//send process to IO Queue after completed CPU burst
-					if (time_quantum > 0) {
+					if (time_quantum >= 0) {
 						//set current IO burst length to be decremented later
 						cpuQ[0].ioBurst = cpuQ[0].instructions[cpuQ[0].counter];
 						//set CPU burst to 0; it's finished!!
@@ -244,6 +249,7 @@ namespace sch {
 					else {
 						//update CPU burst that is left to be completed
 						cpuQ[0].cpuBurst = abs(cpuQ[0].instructions[cpuQ[0].counter] - time_elapsed);
+						cout << "\n\t\t---CPU BURST LEFT: " << cpuQ[0].cpuBurst;
 						//send ready queue IO Queue
 						readyQ.push_back(cpuQ[0]);
 						//remove from CPU
@@ -261,7 +267,7 @@ namespace sch {
 		}
 
 		//determine if MLFQ was used
-		int choice = (cycle_limits[0] == 999) ? schedule_choice : 2;
+		int choice = (time_quanta[0] == 999) ? schedule_choice : 2;
 
 		sayChoice(choice);
 		showStats(terminateQ, clock, CPU_unused);
@@ -383,7 +389,7 @@ namespace sch {
 		int turnaround = 0, inits = 0, procnum = 0;
 		//header information including total clock and overhead time
 		cout << "\n-----------------------------------------------------"
-			<< "\n\tClock: " << clock << "\t|\tCPU Unused Time: " << CPU_unused
+			<< "\n\tClock: " << clock << "\t|\tCPU Unused: " << CPU_unused
 			<< "\n-----------------------------------------------------"
 			<< "\nP#\tTr\tTw\tTcpu\tTio\tTtr";
 		cout << "\t\tInital Instruction Length";
@@ -410,13 +416,14 @@ namespace sch {
 				<< "\t" << procs[procnum].cputime
 				<< "\t" << procs[procnum].iotime
 				<< "\t" << procs[procnum].cputime + procs[procnum].iotime + procs[procnum].waittime;
-			//this section is test code used to make sure the Tcpu and Tio times are correct
 			
+			//this section is test code used to make sure the Tcpu and Tio times are correct
+			/*
 			for (int j = 0; j < procs[procnum].length; j++) {
 				inits += procs[procnum].instructions[j];
 			}
 			cout << "\t\t" << inits;
-			
+			*/
 		}
 
 		cout << "\n-----------------------------------------------------"
@@ -444,8 +451,7 @@ namespace sch {
 	// - return first position the ready queue
 	int FCFS() {
 		//yes really that's it, it just loads the top of the ready queue
-		//honestly kinda funny
-		//this is also the tertiary scheduling algorithm for MLFQ
+		//honestly kinda funny, I thought it'd be more :p
 		return 0;
 	}
 
