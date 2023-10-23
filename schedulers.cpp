@@ -162,7 +162,7 @@ namespace sch {
 			}
 
 			//Time quantum flags were removed because they are annoying to look at. Added current time quantum to fail state.
-			cout << "\n\t\t---ready_iteration: " << ready_iteration << " ---T_Qantum: " << time_quantum << " ---Counter:" << queue_counter;
+			cout << "\n\t\t---ready_iteration: " << ready_iteration << " ---T_Qantum: " << time_quantum << " ---Queue:" << queue_counter;
 
 			//set main simulation time to 0
 			time_elapsed = 0;
@@ -210,7 +210,7 @@ namespace sch {
 			//output how long the burst lasted
 			cout << "\n\tBurst length: " << time_elapsed;
 			
-			cout << "\n\t\t---ready_iteration: " << ready_iteration << " ---T_Qantum: " << time_quantum << " ---Counter:" << queue_counter;
+			cout << "\n\t\t---ready_iteration: " << ready_iteration << " ---T_Qantum: " << time_quantum << " ---Queue:" << queue_counter;
 
 			//handle process currently in CPU
 			if (cpuQ.size()) {
@@ -311,8 +311,20 @@ namespace sch {
 	void checkReady(vector<PCB>& readyQ) {
 		cout << "\n\t\tProcesses in readyQ:";
 		for (int i = 0; i < readyQ.size(); i++) {
-			cout << "\n\t\t\tP" << readyQ[i].number + 1 << " -- " << readyQ[i].counter << "/" << readyQ[i].length
-			<< ", Tw = " << readyQ[i].waittime;
+			//instruction current position out of  total length
+			cout << "\n\t\t\tP" << readyQ[i].number + 1 << " -- " << readyQ[i].counter << "/" << readyQ[i].length;
+			//Current burst time
+			cout << ", Burst: ";
+			if (readyQ[i].cpuBurst == 0) {
+				cout << readyQ[i].instructions[readyQ[i].counter];
+			}
+			
+			else {
+				cout << readyQ[i].cpuBurst;
+			}
+
+			//Current waiting time
+			//cout << ", Tw = " << readyQ[i].waittime;
 				
 		}
 	}
